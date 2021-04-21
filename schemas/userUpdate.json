@@ -48,7 +48,7 @@
       "minimum": 1
     },
     "imageUrl": {
-      "type": "string"
+      "type": ["string", "null"]
     }
   },
   "additionalProperties": false,

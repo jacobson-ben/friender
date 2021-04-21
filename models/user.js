@@ -94,7 +94,7 @@ class User {
           location,
           radius,
           is_admin)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING username, first_name AS "firstName", last_name AS "lastName", email, age, bio, interests, image_url AS "imageUrl", location, radius, is_admin AS "isAdmin"`,
       [
         username,
@@ -151,19 +151,20 @@ class User {
 
   static async get(username) {
     const userRes = await db.query(
-      `SELECT username,
-      first_name AS "firstName",
-      last_name AS "lastName",
-      email,
-      age,
-      bio,
-      interests,
-      image_url AS "imageUrl", 
-      location,
-      radius,         
-      is_admin AS "isAdmin"
-FROM users
-           WHERE username = $1`,
+      `SELECT 
+        username,
+        first_name AS "firstName",
+        last_name AS "lastName",
+        email,
+        age,
+        bio,
+        interests,
+        image_url AS "imageUrl", 
+        location,
+        radius,         
+        is_admin AS "isAdmin"
+      FROM users
+      WHERE username = $1`,
       [username]
     );
 
@@ -174,11 +175,31 @@ FROM users
     const userLikesRes = await db.query(
       `SELECT liked
            FROM likes
-           WHERE username = $1`,
+           WHERE liker = $1`,
       [username]
     );
+    
+    console.log("TESTING!!!", userLikesRes.rows);
+    user.likes = userLikesRes.rows.map((l) => l.liked);
 
-    user.likes = userLikesRes.rows.map((like) => like.liked);
+    const userMatchesFirst = await db.query(
+      `SELECT username_first
+        FROM matches
+        WHERE username_second = $1`,
+      [username]
+    )
+    
+    const userMatchesSecond = await db.query(
+      `SELECT username_second
+        FROM matches
+        WHERE username_first = $1`,
+      [username]
+    )
+
+    const matchesUserInFirstColumn = userMatchesFirst.rows.map((m) => m.username_first);
+    const matchesUserInSecondColumn = userMatchesSecond.rows.map((m) => m.username_second)
+    user.matches = matchesUserInFirstColumn.concat(matchesUserInSecondColumn);
+
     return user;
   }
 
@@ -258,29 +279,34 @@ FROM users
 
   static async likeAUser(username, likedUsername) {
     const preCheck = await db.query(
-      `SELECT liked
-           FROM likes
-           WHERE liked = $1`,
-      [likedUsername]
-    );
-    const likedUser = preCheck.rows[0];
-
-    if (!likedUser) throw new NotFoundError(`No user found: ${likedUsername}`);
-
-    const preCheck2 = await db.query(
       `SELECT username
            FROM users
            WHERE username = $1`,
       [username]
     );
+    const likedUser = preCheck.rows[0];
+
+    if (!likedUser) throw new NotFoundError(`No user found: ${likedUser}`);
+
+    const preCheck2 = await db.query(
+      `SELECT username
+           FROM users
+           WHERE username = $1`,
+      [likedUsername]
+    );
     const user = preCheck2.rows[0];
 
     if (!user) throw new NotFoundError(`No username: ${username}`);
 
-    await db.query(
+    const results = await db.query(
       `INSERT INTO likes (liker, liked)
-           VALUES ($1, $2)`,
+           VALUES ($1, $2)
+            RETURNING liker, liked`,
       [username, likedUsername]
     );
+
+    return results.rows[0]
   }
 }
+
+module.exports = User;

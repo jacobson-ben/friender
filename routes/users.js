@@ -124,12 +124,16 @@ router.delete("/:username", async function (req, res, next) {
 
 router.post("/:username/like/:likedUsername", async function (req, res, next) {
   try {
-    const jobId = +req.params.id;
-    await User.likeAUser(req.params.username, jobId);
-    return res.json({ applied: jobId });
+    const likedUsername = req.params.likedUsername;
+    await User.likeAUser(req.params.username, likedUsername);
+    return res.json({ liked: likedUsername });
   } catch (err) {
     return next(err);
   }
 });
+
+// router.post("/:username/matches", async function (req, res, next) {
+
+// }) 
 
 module.exports = router;
