@@ -178,7 +178,7 @@ class User {
            WHERE liker = $1`,
       [username]
     );
-    
+
     console.log("TESTING!!!", userLikesRes.rows);
     user.likes = userLikesRes.rows.map((l) => l.liked);
 
@@ -187,17 +187,21 @@ class User {
         FROM matches
         WHERE username_second = $1`,
       [username]
-    )
-    
+    );
+
     const userMatchesSecond = await db.query(
       `SELECT username_second
         FROM matches
         WHERE username_first = $1`,
       [username]
-    )
+    );
 
-    const matchesUserInFirstColumn = userMatchesFirst.rows.map((m) => m.username_first);
-    const matchesUserInSecondColumn = userMatchesSecond.rows.map((m) => m.username_second)
+    const matchesUserInFirstColumn = userMatchesFirst.rows.map(
+      (m) => m.username_first
+    );
+    const matchesUserInSecondColumn = userMatchesSecond.rows.map(
+      (m) => m.username_second
+    );
     user.matches = matchesUserInFirstColumn.concat(matchesUserInSecondColumn);
 
     return user;
@@ -271,13 +275,13 @@ class User {
     if (!user) throw new NotFoundError(`No user: ${username}`);
   }
 
-  /** Apply for job: update db, returns undefined.
+  /** Like a user
    *
    * - username: username applying for job
-   * - jobId: job id
    **/
 
   static async likeAUser(username, likedUsername) {
+    //check to make sure user who is liking exists in db.
     const preCheck = await db.query(
       `SELECT username
            FROM users
@@ -286,8 +290,9 @@ class User {
     );
     const likedUser = preCheck.rows[0];
 
-    if (!likedUser) throw new NotFoundError(`No user found: ${likedUser}`);
+    if (!likedUser) throw new NotFoundError(`No user found: ${likedUsername}`);
 
+    //check to make sure user who is liked exists in db.
     const preCheck2 = await db.query(
       `SELECT username
            FROM users
@@ -298,6 +303,7 @@ class User {
 
     if (!user) throw new NotFoundError(`No username: ${username}`);
 
+    //an array of usernames that the user "liked"
     const results = await db.query(
       `INSERT INTO likes (liker, liked)
            VALUES ($1, $2)
@@ -305,7 +311,17 @@ class User {
       [username, likedUsername]
     );
 
-    return results.rows[0]
+    return results.rows[0];
+  }
+
+  static async addUserToMatches(username, likedUsername) {
+    const result = await db.query(
+      `INSERT INTO matches(username_first, username_second)
+      VALUES ($1, $2)
+      RETURNING username_first username_second`,
+      [username, likedUsername]
+    );
+    return result.rows[0];
   }
 }
 
