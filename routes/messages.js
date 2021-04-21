@@ -3,14 +3,18 @@
 const Router = require("express").Router;
 const router = new Router();
 
-const { client } = require("../config")
-const Message = require("../models/message")
+const { client } = require("../config");
+const Message = require("../models/message");
+const User = require("../models/user");
 const { UnauthorizedError } = require("../expressError");
+
 const db = require("../db");
-const { ensureLoggedIn, authenticateJWT, ensureCorrectUser } = require("../middleware/auth");
-
-
-
+const {
+  ensureLoggedIn,
+  authenticateJWT,
+  ensureCorrectUser,
+  ensureCorrectUserOrAdmin,
+} = require("../middleware/auth");
 
 /** GET /:id - get detail of message.
  *
@@ -25,17 +29,18 @@ const { ensureLoggedIn, authenticateJWT, ensureCorrectUser } = require("../middl
  *
  **/
 
-router.get("/:id", ensureLoggedIn, async function(req, res, next) {
-
-  const message = await Message.get(req.params.id)
+router.get("/:id", ensureCorrectUserOrAdmin, async function (req, res, next) {
+  const message = await Message.get(req.params.id);
   const toUser = message.to_user.username;
   const fromUser = message.from_user.username;
-  if(res.locals.user.username === toUser || res.locals.user.username === fromUser) {
-    return res.json({message})
+  if (
+    res.locals.user.username === toUser ||
+    res.locals.user.username === fromUser
+  ) {
+    return res.json({ message });
   }
-  throw new UnauthorizedError()
-})
-
+  throw new UnauthorizedError();
+});
 
 /** POST / - post message.
  *
@@ -44,17 +49,17 @@ router.get("/:id", ensureLoggedIn, async function(req, res, next) {
  *
  **/
 
-router.post("/", ensureLoggedIn, async function(req, res, next) {
+router.post("/", ensureCorrectUserOrAdmin, async function (req, res, next) {
+  const user = await User.get(res.locals.user.username);
+
+  if (!user.matches.includes(req.body.to_username)) {
+    throw new UnauthorizedError("User not in matches.");
+  }
+
   const message = await Message.create(req.body);
-  const username = message.from_username 
 
-  client.messages
-      .create({from: `${fromPhone}`, body: `You have received a message from ${username}`, to: `+17742222690`})
-      .then(message => console.log(message.sid));
-  // Add twilio code here: https://www.twilio.com/docs/sms/api/message-resource#create-a-message-resource
-  return res.json({message})
-})
-
+  return res.json({ message });
+});
 
 /** POST/:id/read - mark message as read:
  *
@@ -64,15 +69,18 @@ router.post("/", ensureLoggedIn, async function(req, res, next) {
  *
  **/
 
-router.post("/:id/read", ensureLoggedIn, async function(req, res, next) {
-  const message = await Message.get(req.params.id)
-  const toUser = message.to_user.username;
-  if(res.locals.user.username === toUser) {
-    const markRead = await Message.markRead(req.params.id)
-    return res.json({markRead})
+router.post(
+  "/:id/read",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    const message = await Message.get(req.params.id);
+    const toUser = message.to_user.username;
+    if (res.locals.user.username === toUser) {
+      const markRead = await Message.markRead(req.params.id);
+      return res.json({ markRead });
+    }
+    throw new UnauthorizedError();
   }
-  throw new UnauthorizedError()
-})
-
+);
 
 module.exports = router;

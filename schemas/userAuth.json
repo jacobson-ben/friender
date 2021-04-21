@@ -11,12 +11,9 @@
     "password": {
       "type": "string",
       "minLength": 5,
-      "maxLength": 20
+      "maxLength": 200
     }
   },
   "additionalProperties": false,
-  "required": [
-    "username",
-    "password"
-  ]
+  "required": ["username", "password"]
 }

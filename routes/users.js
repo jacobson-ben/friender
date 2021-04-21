@@ -5,7 +5,7 @@
 const jsonschema = require("jsonschema");
 
 const express = require("express");
-// const { ensureCorrectUserOrAdmin, ensureAdmin } = require("../middleware/auth");
+const { ensureCorrectUserOrAdmin, ensureAdmin } = require("../middleware/auth");
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");
 // const { createToken } = require("../helpers/tokens");
@@ -27,7 +27,7 @@ const router = express.Router();
  * Authorization required: admin
  **/
 
-router.post("/", async function (req, res, next) {
+router.post("/", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, userNewSchema);
     if (!validator.valid) {
@@ -50,7 +50,7 @@ router.post("/", async function (req, res, next) {
  * Authorization required: admin
  **/
 
-router.get("/", async function (req, res, next) {
+router.get("/", ensureAdmin, async function (req, res, next) {
   try {
     const users = await User.findAll();
     return res.json({ users });
@@ -67,14 +67,18 @@ router.get("/", async function (req, res, next) {
  * Authorization required: admin or same user-as-:username
  **/
 
-router.get("/:username", async function (req, res, next) {
-  try {
-    const user = await User.get(req.params.username);
-    return res.json({ user });
-  } catch (err) {
-    return next(err);
+router.get(
+  "/:username",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    try {
+      const user = await User.get(req.params.username);
+      return res.json({ user });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
 
 /** PATCH /[username] { user } => { user }
  *
@@ -86,62 +90,70 @@ router.get("/:username", async function (req, res, next) {
  * Authorization required: admin or same-user-as-:username
  **/
 
-router.patch("/:username", async function (req, res, next) {
-  try {
-    const validator = jsonschema.validate(req.body, userUpdateSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map((e) => e.stack);
-      throw new BadRequestError(errs);
-    }
+router.patch(
+  "/:username",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    try {
+      const validator = jsonschema.validate(req.body, userUpdateSchema);
+      if (!validator.valid) {
+        const errs = validator.errors.map((e) => e.stack);
+        throw new BadRequestError(errs);
+      }
 
-    const user = await User.update(req.params.username, req.body);
-    return res.json({ user });
-  } catch (err) {
-    return next(err);
+      const user = await User.update(req.params.username, req.body);
+      return res.json({ user });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
 
 /** DELETE /[username]  =>  { deleted: username }
  *
  * Authorization required: admin or same-user-as-:username
  **/
 
-router.delete("/:username", async function (req, res, next) {
-  try {
-    await User.remove(req.params.username);
-    return res.json({ deleted: req.params.username });
-  } catch (err) {
-    return next(err);
+router.delete(
+  "/:username",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    try {
+      await User.remove(req.params.username);
+      return res.json({ deleted: req.params.username });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
 
-/** POST /[username]/jobs/[id]  { state } => { application }
+/** POST /[username]/like/[likedUsername]  { state } => { application }
  *
- * Returns {"applied": jobId}
+ * Returns {"liked": likedUsername}
  *
  * Authorization required: admin or same-user-as-:username
  * */
 
-router.post("/:username/like/:likedUsername", async function (req, res, next) {
-  try {
-    const likedUsername = req.params.likedUsername;
-    const username = req.params.username;
-    await User.likeAUser(username, likedUsername);
+router.post(
+  "/:username/like/:likedUsername",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    try {
+      const likedUsername = req.params.likedUsername;
+      const username = req.params.username;
+      await User.likeAUser(username, likedUsername);
 
-    //check to see if other user liked current user to get a match
-    const likedUserInfo = await User.get(likedUsername);
-    if (likedUserInfo.likes.includes(username)) {
-      await User.addUserToMatches(username, likedUsername);
-      return res.json({ matched: likedUsername });
+      //check to see if other user liked current user to get a match
+      const likedUserInfo = await User.get(likedUsername);
+      if (likedUserInfo.likes.includes(username)) {
+        await User.addUserToMatches(username, likedUsername);
+        return res.json({ matched: likedUsername });
+      }
+      return res.json({ liked: likedUsername });
+    } catch (err) {
+      return next(err);
     }
-    return res.json({ liked: likedUsername });
-  } catch (err) {
-    return next(err);
   }
-});
-
-// router.post("/:username/matches", async function (req, res, next) {
-
-// })
+);
 
 module.exports = router;
