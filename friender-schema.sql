@@ -9,7 +9,8 @@ CREATE TABLE users (
   bio TEXT, 
   interests TEXT NOT NULL,
   image_url TEXT,
-  location MEDIUMINT(5) ZEROFILL,
+  location VARCHAR(5),
+  radius INT NOT NULL DEFAULT 5,
   is_admin BOOLEAN NOT NULL DEFAULT FALSE
 );
 
@@ -19,17 +20,17 @@ CREATE TABLE messages (
   to_username VARCHAR(25) NOT NULL REFERENCES users,
   body TEXT NOT NULL,
   sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  read_at TIMESTAMP WITH TIME ZONE);
+  read_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE likes (
   liker VARCHAR(25) NOT NULL REFERENCES users,
   liked VARCHAR(25) NOT NULL REFERENCES users,
   PRIMARY KEY (liker, liked)
-)
+);
 
 CREATE TABLE matches (
   username_first VARCHAR(25) NOT NULL REFERENCES users,
   username_second VARCHAR(25) NOT NULL REFERENCES users,
   PRIMARY KEY (username_first, username_second)
-)
+);
