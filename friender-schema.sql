@@ -8,7 +8,7 @@ CREATE TABLE users (
   age INTEGER CHECK (age >= 18),
   bio TEXT, 
   interests TEXT NOT NULL,
-  image_url TEXT,
+  image_url TEXT, (result.key)
   location VARCHAR(5),
   radius INT NOT NULL DEFAULT 5,
   is_admin BOOLEAN NOT NULL DEFAULT FALSE
