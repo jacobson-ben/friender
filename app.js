@@ -44,7 +44,7 @@ app.get('/images/:key', (req, res) => {
 
 app.post('/images', upload.single('image'), async (req, res) => {
   const file = req.file
-  console.log(file)
+  console.log(req)
 
   // apply filter
   // resize 
@@ -53,8 +53,7 @@ app.post('/images', upload.single('image'), async (req, res) => {
   await unlinkFile(file.path)
   console.log(result)
   const description = req.body.description
-  res.send({imagePath: `/images/${result.Key}`})
-  
+  res.send({imagePath: `https://friender.s3.amazonaws.com/${result.Key}`})
 })
 
 /** Handle 404 errors -- this matches everything */
