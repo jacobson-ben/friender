@@ -5,7 +5,11 @@
 const jsonschema = require("jsonschema");
 
 const express = require("express");
-const { ensureCorrectUserOrAdmin, ensureAdmin } = require("../middleware/auth");
+const {
+  ensureCorrectUserOrAdmin,
+  ensureAdmin,
+  ensureLoggedIn,
+} = require("../middleware/auth");
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");
 // const { createToken } = require("../helpers/tokens");
@@ -50,7 +54,7 @@ router.post("/", ensureAdmin, async function (req, res, next) {
  * Authorization required: admin
  **/
 
-router.get("/", ensureAdmin, async function (req, res, next) {
+router.get("/", ensureLoggedIn, async function (req, res, next) {
   try {
     const users = await User.findAll();
     return res.json({ users });
@@ -150,6 +154,22 @@ router.post(
         return res.json({ matched: likedUsername });
       }
       return res.json({ liked: likedUsername });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.post(
+  "/:username/dislike/:dislikedUsername",
+  ensureCorrectUserOrAdmin,
+  async function (req, res, next) {
+    try {
+      const dislikedUsername = req.params.dislikedUsername;
+      const username = req.params.username;
+      await User.dislikeAUser(username, dislikedUsername);
+
+      return res.json({ disliked: dislikedUsername });
     } catch (err) {
       return next(err);
     }

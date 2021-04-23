@@ -8,7 +8,7 @@ CREATE TABLE users (
   age INTEGER CHECK (age >= 18),
   bio TEXT, 
   interests TEXT NOT NULL,
-  image_url TEXT, (result.key)
+  image_url TEXT,
   location VARCHAR(5),
   radius INT NOT NULL DEFAULT 5,
   is_admin BOOLEAN NOT NULL DEFAULT FALSE
@@ -27,6 +27,12 @@ CREATE TABLE likes (
   liker VARCHAR(25) NOT NULL REFERENCES users,
   liked VARCHAR(25) NOT NULL REFERENCES users,
   PRIMARY KEY (liker, liked)
+);
+
+CREATE TABLE dislikes (
+  disliker VARCHAR(25) NOT NULL REFERENCES users,
+  disliked VARCHAR(25) NOT NULL REFERENCES users,
+  PRIMARY KEY (disliker, disliked)
 );
 
 CREATE TABLE matches (

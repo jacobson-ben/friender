@@ -172,6 +172,17 @@ class User {
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
 
+    //user dislikes
+    const dislikedRes = await db.query(
+      `SELECT disliked
+           FROM dislikes
+           WHERE disliker = $1`,
+      [username]
+    );
+
+    user.dislikes = dislikedRes.rows.map((d) => d.disliked);
+
+    //user likes
     const userLikesRes = await db.query(
       `SELECT liked
            FROM likes
@@ -179,7 +190,6 @@ class User {
       [username]
     );
 
-    console.log("TESTING!!!", userLikesRes.rows);
     user.likes = userLikesRes.rows.map((l) => l.liked);
 
     const userMatchesFirst = await db.query(
@@ -309,6 +319,41 @@ class User {
            VALUES ($1, $2)
             RETURNING liker, liked`,
       [username, likedUsername]
+    );
+
+    return results.rows[0];
+  }
+
+  static async dislikeAUser(username, dislikedUsername) {
+    //check to make sure user who is disliking exists in db.
+    const preCheck = await db.query(
+      `SELECT username
+           FROM users
+           WHERE username = $1`,
+      [username]
+    );
+    const dislikedUser = preCheck.rows[0];
+
+    if (!dislikedUser)
+      throw new NotFoundError(`No user found: ${dislikedUsername}`);
+
+    //check to make sure user who is disliked exists in db.
+    const preCheck2 = await db.query(
+      `SELECT username
+           FROM users
+           WHERE username = $1`,
+      [dislikedUsername]
+    );
+    const user = preCheck2.rows[0];
+
+    if (!user) throw new NotFoundError(`No username: ${username}`);
+
+    //an array of usernames that the user "disliked"
+    const results = await db.query(
+      `INSERT INTO dislikes (disliker, disliked)
+           VALUES ($1, $2)
+            RETURNING disliker, disliked`,
+      [username, dislikedUsername]
     );
 
     return results.rows[0];
